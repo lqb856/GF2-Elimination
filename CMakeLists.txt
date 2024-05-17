@@ -15,16 +15,20 @@ if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
+# # 添加 src 目录
+# file(GLOB_RECURSE SOURCES LIST_DIRECTORIES true 
+#     src/core/*.h 
+#     src/core/*.cpp
+#     src/utils/*.h 
+#     src/utils/*.cpp
+# )
+# # 打印 SRC_FILES 变量内容
+# message(STATUS "Source files: ${SOURCES}")
+
+
 add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(third_party/googletest)
 
-# # 添加項目的執行文件
-# add_executable(first_bit_test "src/core/context.h" "test/context_test.cpp")
-
-# # 添加 Google Test 相關庫文件到你的執行文件
-# target_link_libraries(first_bit_test gtest gtest_main)
-
-# # 添加測試目標
+# turn on gtest
 enable_testing()
-# add_test(NAME first_bit COMMAND first_bit_test)
