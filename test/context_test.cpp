@@ -142,6 +142,7 @@ TEST(TestContext, TestFirstBit) {
   std::cout << "er row size: " << ctx.er_.bitmap_matrix_.num_rows_ << std::endl;
   std::cout << "es row size: " << ctx.es_.bitmap_matrix_.num_rows_ << std::endl;
   std::cout << "index size: " << index_size << std::endl;
+  std::cout << "********************************************************" << std::endl;
   
   Context ctx1 = ctx.clone();
   ctx1.index_ = new u_int64_t*[index_size]{};
@@ -154,6 +155,7 @@ TEST(TestContext, TestFirstBit) {
   // save_bitmap_matrix(res_file, ctx1.es_.bitmap_matrix_);
   bool cmp = bitmap_matrix_cmp(ans, ctx1.er_.bitmap_matrix_);
   ASSERT_TRUE(cmp);
+  delete [] ctx1.index_;
 
   Context ctx2 = ctx.clone();
   ctx2.index_ = new u_int64_t*[index_size]{};
@@ -166,6 +168,7 @@ TEST(TestContext, TestFirstBit) {
   // save_bitmap_matrix(res_file, ctx.er_.bitmap_matrix_);
   cmp = bitmap_matrix_cmp(ans, ctx2.er_.bitmap_matrix_);
   ASSERT_TRUE(cmp);
+  delete [] ctx2.index_;
 
   Context ctx3 = ctx.clone();
   ctx3.index_ = new u_int64_t*[index_size]{};
@@ -178,6 +181,7 @@ TEST(TestContext, TestFirstBit) {
   // save_bitmap_matrix(res_file, ctx.er_.bitmap_matrix_);
   cmp = bitmap_matrix_cmp(ans, ctx3.er_.bitmap_matrix_);
   ASSERT_TRUE(cmp);
+  delete [] ctx3.index_;
 
   Context ctx4 = ctx.clone();
   ctx4.index_ = new u_int64_t*[index_size]{};
@@ -190,22 +194,45 @@ TEST(TestContext, TestFirstBit) {
   // save_bitmap_matrix(res_file, ctx.er_.bitmap_matrix_);
   cmp = bitmap_matrix_cmp(ans, ctx4.er_.bitmap_matrix_);
   ASSERT_TRUE(cmp);
+  delete [] ctx4.index_;
 
   Context ctx5 = ctx.clone();
   ctx5.index_ = new u_int64_t*[index_size]{};
   ctx5.es_.bitmap_matrix_.first_bit_index(ctx5.index_, index_size);
   start = std::chrono::high_resolution_clock::now();
-  ge_pthread(&ctx5, thread_num, lock_num);
+  ge_pthread(&ctx5, thread_num, lock_num, false);
   end = std::chrono::high_resolution_clock::now();
   duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
   std::cout << "ge_pthread time: " << duration.count() << " milliseconds" << std::endl;
+  delete [] ctx5.index_;
 
   Context ctx6 = ctx.clone();
   ctx6.index_ = new u_int64_t*[index_size]{};
   ctx6.es_.bitmap_matrix_.first_bit_index(ctx6.index_, index_size);
   start = std::chrono::high_resolution_clock::now();
-  ge_pthread(&ctx6, thread_num, lock_num);
+  ge_pthread(&ctx6, thread_num, lock_num, false);
   end = std::chrono::high_resolution_clock::now();
   duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
   std::cout << "ge_omp time: " << duration.count() << " milliseconds" << std::endl;
+  delete [] ctx6.index_;
+
+  Context ctx7 = ctx.clone();
+  ctx7.index_ = new u_int64_t*[index_size]{};
+  ctx7.es_.bitmap_matrix_.first_bit_index(ctx7.index_, index_size);
+  start = std::chrono::high_resolution_clock::now();
+  ge_pthread(&ctx7, thread_num, lock_num);
+  end = std::chrono::high_resolution_clock::now();
+  duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+  std::cout << "ge_pthread_avx time: " << duration.count() << " milliseconds" << std::endl;
+  delete [] ctx7.index_;
+
+  Context ctx8 = ctx.clone();
+  ctx8.index_ = new u_int64_t*[index_size]{};
+  ctx8.es_.bitmap_matrix_.first_bit_index(ctx8.index_, index_size);
+  start = std::chrono::high_resolution_clock::now();
+  ge_pthread(&ctx8, thread_num, lock_num);
+  end = std::chrono::high_resolution_clock::now();
+  duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+  std::cout << "ge_omp_avx time: " << duration.count() << " milliseconds" << std::endl;
+  delete [] ctx8.index_;
 }

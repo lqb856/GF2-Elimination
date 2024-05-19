@@ -23,6 +23,7 @@ typedef struct {
     int num_thread;
     int thread_id;
     int num_lock;
+    bool use_simd;
 } ThreadArgs;
 
 void *ge_pthread_core(void *args) {
@@ -31,6 +32,7 @@ void *ge_pthread_core(void *args) {
   auto num_thread = thread_args->num_thread;
   auto thread_id = thread_args->thread_id;
   auto num_lock = thread_args->num_lock;
+  auto use_simd = thread_args->use_simd;
   auto rw_lock = thread_args->mutexes;
   int row_per_thread = std::ceil(static_cast<double>(ER_MATRIX.num_rows_) / static_cast<double>(num_thread));
   int range_start = thread_id * row_per_thread;
@@ -61,25 +63,32 @@ void *ge_pthread_core(void *args) {
       rw_lock[first_bit % num_lock].unlock_shared();
 
       // avx512
-      int j = 0;
-      for (; j + AVX_512_CHUNK_SIZE < ER_MATRIX.bitmap_col_size_;
-           j += AVX_512_CHUNK_SIZE) {
-        __m512i er = _mm512_loadu_si512((void *)&ER_MATRIX.bitmap_[i][j]);
-        __m512i es =
-            _mm512_loadu_si512((void *)&iter[j]);
-        __m512i vx = _mm512_xor_si512(er, es);
-        _mm512_storeu_si512((void *)&ER_MATRIX.bitmap_[i][j], vx);
-      }
-      for (; j < ER_MATRIX.bitmap_col_size_; j++) {
-        ER_MATRIX.bitmap_[i][j] =
-            ER_MATRIX.bitmap_[i][j] ^ iter[j];
+      if (use_simd) {
+        int j = 0;
+        for (; j + AVX_512_CHUNK_SIZE < ER_MATRIX.bitmap_col_size_;
+            j += AVX_512_CHUNK_SIZE) {
+          __m512i er = _mm512_loadu_si512((void *)&ER_MATRIX.bitmap_[i][j]);
+          __m512i es =
+              _mm512_loadu_si512((void *)&iter[j]);
+          __m512i vx = _mm512_xor_si512(er, es);
+          _mm512_storeu_si512((void *)&ER_MATRIX.bitmap_[i][j], vx);
+        }
+        for (; j < ER_MATRIX.bitmap_col_size_; j++) {
+          ER_MATRIX.bitmap_[i][j] =
+              ER_MATRIX.bitmap_[i][j] ^ iter[j];
+        }
+      } else {
+        for (int j = 0; j < ER_MATRIX.bitmap_col_size_; j++) {
+          ER_MATRIX.bitmap_[i][j] =
+              ER_MATRIX.bitmap_[i][j] ^ iter[j];
+        }
       }
     }
   }
   return nullptr;
 }
 
-void ge_pthread(Context *ge_ctx, int num_thread = 32, int num_lock = 32) {
+void ge_pthread(Context *ge_ctx, int num_thread = 32, int num_lock = 32, bool use_simd = true) {
   pthread_t *threads = new pthread_t[num_thread];
   ThreadArgs *args = new ThreadArgs[num_thread];
   std::shared_mutex *mutexes = new std::shared_mutex[num_lock];
@@ -89,6 +98,7 @@ void ge_pthread(Context *ge_ctx, int num_thread = 32, int num_lock = 32) {
     args[i].num_thread = num_thread;
     args[i].mutexes = mutexes;
     args[i].num_lock = num_lock;
+    args[i].use_simd = use_simd;
     pthread_create(&threads[i], nullptr, ge_pthread_core, (void*)&args[i]);
   }
   for (int i = 0; i < num_thread; ++i) {
