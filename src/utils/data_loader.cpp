@@ -3,7 +3,10 @@
 #include <cstddef>
 #include <fstream>
 #include <iostream>
+#include <memory>
+#include <ostream>
 #include <sstream>
+#include <sys/types.h>
 #include <vector>
 
 #include "context.h"
@@ -53,6 +56,7 @@ BitMapMatrix load_bitmap_matrix(const std::string &filename, int num_cols) {
   BitMapMatrix bitmap;
   bitmap.num_rows_ = 0;
   bitmap.num_cols_ = num_cols;
+  bitmap.bitmap_col_size_ = int(std::ceil(static_cast<double>(num_cols) / 64.0));
 
   std::ifstream file(filename);
   if (!file.is_open()) {
@@ -60,23 +64,22 @@ BitMapMatrix load_bitmap_matrix(const std::string &filename, int num_cols) {
     return bitmap;
   }
 
-  int num_uint64_per_row = std::ceil(static_cast<double>(num_cols) / 64.0);
 
   std::string line;
   while (std::getline(file, line)) {
-    bitmap.num_rows_++;
-    std::vector<uint64_t> row_bitmap(num_uint64_per_row, 0);
+    auto row_bitmap = std::make_unique<u_int64_t[]>(bitmap.bitmap_col_size_);
+    std::fill_n(row_bitmap.get(), bitmap.bitmap_col_size_, 0UL); 
+
     std::istringstream iss(line);
     int index;
     while (iss >> index) {
       int block_idx = index / 64;
       int bit_idx = index % 64;
-      row_bitmap[block_idx] |= (1ULL << bit_idx);
+      row_bitmap.get()[block_idx] |= (1ULL << bit_idx);
     }
-
-    bitmap.bitmap_.push_back(row_bitmap);
+    bitmap.num_rows_++;
+    bitmap.bitmap_.push_back(std::move(row_bitmap));
   }
-
   return bitmap;
 }
 
@@ -89,7 +92,8 @@ void save_bitmap_matrix(const std::string &filename,
   }
 
   // 将位图数据写入文件，从高位开始写入
-  for (const auto &row_bitmap : bitmap_matrix.bitmap_) {
+  for (int i = 0; i < bitmap_matrix.num_rows_; i++) {
+    const auto row_bitmap = bitmap_matrix.bitmap_[i].get();
     for (int j = bitmap_matrix.num_cols_ - 1; j >= 0; --j) {
       int block_idx = j / 64; // 确定索引在哪个 uint64_t 块中
       int bit_idx = j % 64;   // 确定索引在 uint64_t 中的位置
@@ -103,37 +107,18 @@ void save_bitmap_matrix(const std::string &filename,
   }
 }
 
-void print_set_positions(const std::vector<uint64_t> &row_bitmap,
-                         size_t num_cols) {
-  for (size_t i = 0; i < row_bitmap.size(); ++i) {
-    for (size_t j = 0; j < 64 && (i * 64 + j) < num_cols; ++j) {
-      if ((row_bitmap[i] >> j) & 1) {
-        std::cout << (i * 64 + j) << " ";
-      }
-    }
-  }
-  std::cout << std::endl;
-}
-
 bool bitmap_matrix_cmp(const BitMapMatrix &matrix1,
                        const BitMapMatrix &matrix2) {
   // 检查行数和列数是否相同
   if (matrix1.num_rows_ != matrix2.num_rows_ ||
-      matrix1.num_cols_ != matrix2.num_cols_) {
+      matrix1.num_cols_ != matrix2.num_cols_ ||
+      matrix1.bitmap_col_size_ != matrix2.bitmap_col_size_) {
     return false;
   }
 
   // 逐行比较位图数组
   for (int i = 0; i < matrix1.num_rows_; ++i) {
-    const auto &row_bitmap1 = matrix1.bitmap_[i];
-    const auto &row_bitmap2 = matrix2.bitmap_[i];
-
-    // 如果行的位图数组大小不同，则两个矩阵不相同
-    if (row_bitmap1.size() != row_bitmap2.size()) {
-      return false;
-    }
-
-    for (size_t j = 0; j < row_bitmap1.size(); j++) {
+    for (int j = 0; j < matrix1.bitmap_col_size_; j++) {
       if (matrix1.bitmap_[i][j] != matrix2.bitmap_[i][j]) {
         std::cout << "Difference in row " << i << ", col[" << (j << 6) << "~ "
                   << ((j + 1) << 6) << "]: " << std::endl;

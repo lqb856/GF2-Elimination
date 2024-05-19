@@ -7,8 +7,8 @@ foreach(TEST_SOURCE ${TEST_SOURCES})
     get_filename_component(TEST_NAME ${TEST_SOURCE} NAME_WE)
     # 生成可执行文件并链接 src 目录下的源文件
     add_executable(${TEST_NAME} ${TEST_SOURCE})
-    target_compile_options(${TEST_NAME} PUBLIC -pthread -mpopcnt -O2 -Wall -march=native)
-    target_link_libraries(${TEST_NAME} PUBLIC ${CMAKE_PROJECT_NAME}_lib gtest gtest_main)
+    target_compile_options(${TEST_NAME} PUBLIC -pthread -mpopcnt -O2 -Wall -march=native -mavx512f -mavx2 -msse2 -fopenmp)
+    target_link_libraries(${TEST_NAME} PUBLIC ${CMAKE_PROJECT_NAME}_lib gtest gtest_main OpenMP::OpenMP_CXX)
     # 添加测试用例
     add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
 endforeach(TEST_SOURCE)

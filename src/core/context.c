@@ -3,14 +3,14 @@
 #include <cmath>
 #include <x86intrin.h>
 
-int BitMapMatrix::bitmap_col_size() {
-  return int(std::ceil(static_cast<double>(num_cols_) / 64.0));
+int BitMapMatrix::bitmap_col_size() const {
+  return bitmap_col_size_;
 }
 
 // NOLINTNEXTLINE
 int BitMapMatrix::first_bit_of_row(int row_id) {
   assert(row_id < num_rows_);
-  for (int i = bitmap_[row_id].size() - 1; i >= 0; i--) {
+  for (int i = bitmap_col_size_ - 1; i >= 0; i--) {
     if (bitmap_[row_id][i] == 0) {
       continue;
     }
@@ -19,12 +19,14 @@ int BitMapMatrix::first_bit_of_row(int row_id) {
   return -1;
 }
 
-std::map<int, int> BitMapMatrix::first_bit_index() {
-  std::map<int, int> res;
+void BitMapMatrix::first_bit_index(u_int64_t** index, int size) {
+  assert(size > num_rows_);
+  // for (int i = 0; i < size; i++) {
+  //   index[i] = nullptr;
+  // }
   for (int i = 0; i < num_rows_; i++) {
     int first_bit_pos = first_bit_of_row(i);
-    res[first_bit_pos] = i;
+    index[first_bit_pos] = bitmap_[i].get();
     // printf("line %d, first bit: %d\n", i, first_bit_pos);
   }
-  return res;
 }
