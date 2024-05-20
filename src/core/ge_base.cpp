@@ -9,7 +9,7 @@
  * @param ge_ctx 消元上下文，包括消元行、消元子的信息
  * @param num_thread 消元线程数，在基本算法里面没有使用
  * @param num_lock 互斥锁数量，在基本算法里面没有使用
- */ 
+ */
 void ge_base(Context *ge_ctx, [[maybe_unused]] int num_thread = 0 /*unused*/,
              [[maybe_unused]] int num_lock = 0 /*unused*/) {
   // 依次对每一行进行消元
@@ -30,5 +30,3 @@ void ge_base(Context *ge_ctx, [[maybe_unused]] int num_thread = 0 /*unused*/,
     }
   }
 }
-
-

@@ -3,9 +3,7 @@
 #include <cmath>
 #include <x86intrin.h>
 
-int BitMapMatrix::bitmap_col_size() const {
-  return bitmap_col_size_;
-}
+int BitMapMatrix::bitmap_col_size() const { return bitmap_col_size_; }
 
 // NOLINTNEXTLINE
 int BitMapMatrix::first_bit_of_row(int row_id) {
@@ -19,7 +17,7 @@ int BitMapMatrix::first_bit_of_row(int row_id) {
   return -1;
 }
 
-void BitMapMatrix::first_bit_index(u_int64_t** index, int size) {
+void BitMapMatrix::first_bit_index(u_int64_t **index, int size) {
   assert(size > num_rows_);
   // for (int i = 0; i < size; i++) {
   //   index[i] = nullptr;
